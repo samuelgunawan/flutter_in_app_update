@@ -27,7 +27,7 @@ interface ActivityProvider {
 }
 
 class InAppUpdatePlugin : FlutterPlugin, MethodCallHandler,
-    PluginRegistry.ActivityResultListener, Application.ActivityLifecycleCallbacks, ActivityAware {
+        PluginRegistry.ActivityResultListener, Application.ActivityLifecycleCallbacks, ActivityAware {
 
     companion object {
         @JvmStatic
@@ -54,8 +54,8 @@ class InAppUpdatePlugin : FlutterPlugin, MethodCallHandler,
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(
-            flutterPluginBinding.binaryMessenger,
-            "in_app_update"
+                flutterPluginBinding.binaryMessenger,
+                "in_app_update"
         )
         channel.setMethodCallHandler(this)
     }
@@ -126,50 +126,57 @@ class InAppUpdatePlugin : FlutterPlugin, MethodCallHandler,
         activityProvider = null
     }
 
-    override fun onActivityCreated(activity: Activity?, savedInstanceState: Bundle?) {}
+    override fun onActivityCreated(p0: Activity, p1: Bundle?) {
+    }
 
-    override fun onActivityPaused(activity: Activity?) {}
+    override fun onActivityStarted(p0: Activity) {
+    }
 
-    override fun onActivityStarted(activity: Activity?) {}
-
-    override fun onActivityDestroyed(activity: Activity?) {}
-
-    override fun onActivitySaveInstanceState(activity: Activity?, outState: Bundle?) {}
-
-    override fun onActivityStopped(activity: Activity?) {}
-
-    override fun onActivityResumed(activity: Activity?) {
+    override fun onActivityResumed(activity: Activity) {
         appUpdateManager
-            ?.appUpdateInfo
-            ?.addOnSuccessListener { appUpdateInfo ->
-                if (appUpdateInfo.updateAvailability()
-                    == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
-                ) {
-                    requireNotNull(activityProvider?.activity()) {
-                        updateResult?.error(
-                            "in_app_update requires a foreground activity",
-                            null,
-                            null
+                ?.appUpdateInfo
+                ?.addOnSuccessListener { appUpdateInfo ->
+                    if (appUpdateInfo.updateAvailability()
+                            == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
+                    ) {
+                        requireNotNull(activityProvider?.activity()) {
+                            updateResult?.error(
+                                    "in_app_update requires a foreground activity",
+                                    null,
+                                    null
+                            )
+                            Unit
+                        }
+                        appUpdateManager?.startUpdateFlowForResult(
+                                appUpdateInfo,
+                                AppUpdateType.IMMEDIATE,
+                                activityProvider?.activity()!!,
+                                REQUEST_CODE_START_UPDATE
                         )
-                        Unit
+
                     }
-                    appUpdateManager?.startUpdateFlowForResult(
-                        appUpdateInfo,
-                        AppUpdateType.IMMEDIATE,
-                        activityProvider?.activity(),
-                        REQUEST_CODE_START_UPDATE
-                    )
                 }
-            }
+    }
+
+    override fun onActivityPaused(p0: Activity) {
+    }
+
+    override fun onActivityStopped(p0: Activity) {
+    }
+
+    override fun onActivitySaveInstanceState(p0: Activity, p1: Bundle) {
+    }
+
+    override fun onActivityDestroyed(p0: Activity) {
     }
 
     private fun performImmediateUpdate(result: Result) = checkAppState(result) {
         updateResult = result
         appUpdateManager?.startUpdateFlowForResult(
-            appUpdateInfo,
-            AppUpdateType.IMMEDIATE,
-            activityProvider?.activity(),
-            REQUEST_CODE_START_UPDATE
+                appUpdateInfo!!,
+                AppUpdateType.IMMEDIATE,
+                activityProvider?.activity()!!,
+                REQUEST_CODE_START_UPDATE
         )
     }
 
@@ -190,20 +197,20 @@ class InAppUpdatePlugin : FlutterPlugin, MethodCallHandler,
 
         updateResult = result
         appUpdateManager?.startUpdateFlowForResult(
-            appUpdateInfo,
-            AppUpdateType.FLEXIBLE,
-            activityProvider?.activity(),
-            REQUEST_CODE_START_UPDATE
+                appUpdateInfo!!,
+                AppUpdateType.FLEXIBLE,
+                activityProvider?.activity()!!,
+                REQUEST_CODE_START_UPDATE
         )
         appUpdateManager?.registerListener { state ->
             if (state.installStatus() == InstallStatus.DOWNLOADED) {
                 updateResult?.success(null)
                 updateResult = null
-            } else if (state.installErrorCode() != null) {
+            } else {
                 updateResult?.error(
-                    "Error during installation",
-                    state.installErrorCode().toString(),
-                    null
+                        "Error during installation",
+                        state.installErrorCode().toString(),
+                        null
                 )
                 updateResult = null
             }
@@ -222,7 +229,7 @@ class InAppUpdatePlugin : FlutterPlugin, MethodCallHandler,
         activityProvider?.addActivityResultListener(this)
         activityProvider?.activity()?.application?.registerActivityLifecycleCallbacks(this)
 
-        appUpdateManager = AppUpdateManagerFactory.create(activityProvider?.activity())
+        appUpdateManager = AppUpdateManagerFactory.create(activityProvider?.activity()!!)
 
         // Returns an intent object that you use to check for an update.
         val appUpdateInfoTask = appUpdateManager!!.appUpdateInfo
@@ -232,21 +239,21 @@ class InAppUpdatePlugin : FlutterPlugin, MethodCallHandler,
             appUpdateInfo = info
             if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
                 result.success(
-                    mapOf(
-                        "updateAvailable" to true,
-                        "immediateAllowed" to info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE),
-                        "flexibleAllowed" to info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE),
-                        "availableVersionCode" to info.availableVersionCode()
-                    )
+                        mapOf(
+                                "updateAvailable" to true,
+                                "immediateAllowed" to info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE),
+                                "flexibleAllowed" to info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE),
+                                "availableVersionCode" to info.availableVersionCode()
+                        )
                 )
             } else {
                 result.success(
-                    mapOf(
-                        "updateAvailable" to false,
-                        "immediateAllowed" to false,
-                        "flexibleAllowed" to false,
-                        "availableVersionCode" to null
-                    )
+                        mapOf(
+                                "updateAvailable" to false,
+                                "immediateAllowed" to false,
+                                "flexibleAllowed" to false,
+                                "availableVersionCode" to null
+                        )
                 )
             }
         }
